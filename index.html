@@ -1,0 +1,1538 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>استخراج رقم الهاتف</title>
+    
+    <!-- الخطوط والأيقونات -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@500;700;800;900&family=JetBrains+Mono:wght@600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- Firebase SDK (v8) -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+    <style>
+        :root {
+            --bg-color: #0b0f19;
+            --card-color: rgba(18, 24, 38, 0.95);
+            --main-blue: #2563eb;
+            --main-glow: rgba(37, 99, 235, 0.35);
+            --border-line: rgba(255, 255, 255, 0.08);
+            --text-dark: #f8fafc;
+            --text-gray: #94a3b8;
+            --emerald-accent: #10b981;
+            --emerald-bg: rgba(16, 185, 129, 0.12);
+            --danger-color: #ef4444;
+            --telegram-color: #229ed9;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Tajawal', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .font-mono {
+            font-family: 'JetBrains Mono', monospace !important;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-dark);
+            min-height: 100vh;
+            background-image: 
+                radial-gradient(circle at 50% 0%, rgba(37, 99, 235, 0.12) 0%, transparent 60%),
+                radial-gradient(circle at 100% 100%, rgba(16, 185, 129, 0.06) 0%, transparent 50%);
+            background-attachment: fixed;
+        }
+
+        .auth-screen {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px 16px;
+        }
+
+        .app-screen {
+            display: none;
+            padding-bottom: 85px;
+        }
+
+        /* الهيدر العلوي */
+        .top-bar {
+            background: rgba(11, 15, 25, 0.92);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border-line);
+            padding: 10px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            height: 64px;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .btn-drawer-open {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid var(--border-line);
+            color: #fff;
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-drawer-open:active {
+            transform: scale(0.92);
+            background: rgba(255, 255, 255, 0.12);
+        }
+
+        .brand-name {
+            font-size: 1.05rem;
+            font-weight: 900;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .sub-chip {
+            background: var(--emerald-bg);
+            border: 1px solid rgba(16, 185, 129, 0.35);
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 800;
+            color: #34d399;
+            box-shadow: 0 0 15px rgba(16, 185, 129, 0.15);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            white-space: nowrap;
+        }
+
+        .sub-chip.expired {
+            background: rgba(239, 68, 68, 0.12);
+            border-color: rgba(239, 68, 68, 0.3);
+            color: #f87171;
+            box-shadow: none;
+        }
+
+        .content-box {
+            max-width: 480px;
+            margin: 20px auto;
+            padding: 0 14px;
+        }
+
+        .clean-card {
+            background: var(--card-color);
+            border: 1px solid var(--border-line);
+            border-radius: 24px;
+            padding: 28px 22px;
+            box-shadow: 0 15px 35px -10px rgba(0, 0, 0, 0.5);
+            width: 100%;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+            text-align: right;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.84rem;
+            font-weight: 700;
+            color: var(--text-dark);
+            margin-bottom: 8px;
+        }
+
+        .input-wrap {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .input-wrap input {
+            width: 100%;
+            background: rgba(11, 15, 25, 0.7);
+            border: 1.5px solid var(--border-line);
+            border-radius: 14px;
+            padding: 14px 44px 14px 44px;
+            font-size: 1rem;
+            color: #fff;
+            outline: none;
+            transition: all 0.2s ease;
+        }
+
+        .input-wrap input:focus {
+            border-color: var(--main-blue);
+            box-shadow: 0 0 0 3px var(--main-glow);
+            background: rgba(11, 15, 25, 0.95);
+        }
+
+        .input-wrap .left-icon {
+            position: absolute;
+            left: 14px;
+            color: var(--text-gray);
+            font-size: 1rem;
+            pointer-events: none;
+        }
+
+        .input-wrap .toggle-eye {
+            position: absolute;
+            right: 14px;
+            color: var(--text-gray);
+            font-size: 1.05rem;
+            cursor: pointer;
+            padding: 4px;
+            z-index: 2;
+        }
+
+        .input-wrap input.ltr-input {
+            direction: ltr;
+            text-align: left;
+        }
+
+        .btn-main {
+            width: 100%;
+            padding: 14px;
+            background-color: var(--main-blue);
+            border: none;
+            border-radius: 14px;
+            color: #ffffff;
+            font-size: 0.98rem;
+            font-weight: 800;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            box-shadow: 0 4px 18px var(--main-glow);
+            transition: all 0.2s;
+        }
+
+        .btn-main:active {
+            transform: scale(0.98);
+        }
+
+        .auth-switch-link {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 0.88rem;
+            color: var(--text-gray);
+        }
+
+        .auth-switch-link a {
+            color: #60a5fa;
+            text-decoration: none;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .loader-wrap {
+            display: none;
+            text-align: center;
+            padding: 20px 0 10px;
+        }
+
+        .spinner-ring {
+            width: 36px;
+            height: 36px;
+            margin: 0 auto 10px;
+            border: 3px solid var(--border-line);
+            border-top: 3px solid var(--main-blue);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        .result-box {
+            display: none;
+            margin-top: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            background: rgba(11, 15, 25, 0.6);
+            padding: 16px;
+        }
+
+        .result-meta {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 14px;
+        }
+
+        .meta-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 14px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-line);
+            border-radius: 10px;
+            font-size: 0.88rem;
+        }
+
+        .meta-row.active {
+            background: rgba(37, 99, 235, 0.1);
+            border-color: rgba(37, 99, 235, 0.3);
+        }
+
+        .btn-copy-report {
+            width: 100%;
+            padding: 13px;
+            background: #1e293b;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            color: #ffffff;
+            font-size: 0.9rem;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+
+        .package-card {
+            border: 1.5px solid rgba(37, 99, 235, 0.3);
+            background: rgba(37, 99, 235, 0.05);
+            border-radius: 20px;
+            padding: 24px 20px;
+            margin-top: 10px;
+            text-align: center;
+        }
+
+        .package-title {
+            font-size: 1.2rem;
+            font-weight: 800;
+            color: #60a5fa;
+        }
+
+        .package-price {
+            font-size: 1.55rem;
+            font-weight: 800;
+            color: #fff;
+            margin: 8px 0;
+        }
+
+        .package-detail {
+            font-size: 0.86rem;
+            color: var(--text-gray);
+            margin-bottom: 16px;
+        }
+
+        .activation-box {
+            margin-top: 14px;
+            text-align: right;
+        }
+
+        .activation-box label {
+            display: block;
+            font-size: 0.84rem;
+            font-weight: 700;
+            color: var(--text-dark);
+            margin-bottom: 8px;
+        }
+
+        .activation-box input {
+            width: 100%;
+            background: rgba(11, 15, 25, 0.8);
+            border: 1.5px solid var(--border-line);
+            border-radius: 12px;
+            padding: 12px 14px;
+            font-size: 1.05rem;
+            text-align: center;
+            outline: none;
+            color: #fff;
+            margin-bottom: 12px;
+        }
+
+        .btn-activate {
+            width: 100%;
+            padding: 13px;
+            background: var(--main-blue);
+            color: #ffffff;
+            border: none;
+            border-radius: 12px;
+            font-weight: 800;
+            cursor: pointer;
+            box-shadow: 0 4px 15px var(--main-glow);
+        }
+
+        .active-sub-card {
+            display: none;
+            border: 1.5px solid rgba(16, 185, 129, 0.4);
+            background: rgba(16, 185, 129, 0.06);
+            border-radius: 20px;
+            padding: 26px 20px;
+            text-align: center;
+            animation: popIn 0.3s ease-out;
+        }
+
+        .active-sub-icon {
+            width: 60px;
+            height: 60px;
+            line-height: 60px;
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--emerald-accent);
+            border-radius: 50%;
+            font-size: 1.8rem;
+            margin: 0 auto 14px;
+        }
+
+        /* زر التيليجرام العائم في الصفحة */
+        .floating-telegram-btn {
+            position: fixed;
+            bottom: 80px;
+            right: 18px;
+            background: linear-gradient(135deg, #2aabee, #229ed9);
+            color: #fff;
+            padding: 12px 18px;
+            border-radius: 50px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.9rem;
+            font-weight: 800;
+            text-decoration: none;
+            box-shadow: 0 8px 24px rgba(34, 158, 217, 0.45);
+            z-index: 99;
+            transition: all 0.25s ease;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            animation: floatPulse 2.5s infinite;
+        }
+
+        .floating-telegram-btn:hover {
+            color: #fff;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 28px rgba(34, 158, 217, 0.6);
+        }
+
+        .floating-telegram-btn:active {
+            transform: scale(0.95);
+        }
+
+        .floating-telegram-btn i {
+            font-size: 1.35rem;
+        }
+
+        /* شريط التنقل السفلي */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 68px;
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(15px);
+            border-top: 1px solid var(--border-line);
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .nav-btn {
+            background: transparent;
+            border: none;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-gray);
+            font-size: 0.78rem;
+            font-weight: 700;
+            flex: 1;
+            height: 100%;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.25s ease;
+        }
+
+        .nav-btn i {
+            font-size: 1.25rem;
+            margin-bottom: 4px;
+            transition: transform 0.2s ease;
+        }
+
+        .nav-btn.active {
+            color: #60a5fa;
+        }
+
+        .nav-btn.active i {
+            transform: translateY(-2px);
+            color: #3b82f6;
+            text-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+        }
+
+        .nav-btn.active::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            width: 32px;
+            height: 3px;
+            background: #3b82f6;
+            border-radius: 10px 10px 0 0;
+            box-shadow: 0 -2px 8px #3b82f6;
+        }
+
+        /* القائمة الجانبية (3 شخطات) */
+        .drawer-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.65);
+            backdrop-filter: blur(5px);
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.25s ease;
+        }
+
+        .drawer-overlay.open {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .drawer-panel {
+            position: fixed;
+            top: 0;
+            right: -310px;
+            width: 290px;
+            height: 100%;
+            background: #121826;
+            border-left: 1px solid var(--border-line);
+            z-index: 1001;
+            box-shadow: -5px 0 30px rgba(0, 0, 0, 0.7);
+            display: flex;
+            flex-direction: column;
+            transition: right 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            padding: 24px 18px;
+        }
+
+        .drawer-panel.open {
+            right: 0;
+        }
+
+        .drawer-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border-line);
+            margin-bottom: 18px;
+        }
+
+        .drawer-header h3 {
+            font-size: 1.05rem;
+            font-weight: 800;
+            color: #fff;
+        }
+
+        .drawer-user-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 22px;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-line);
+            border-radius: 14px;
+        }
+
+        .drawer-avatar {
+            width: 42px;
+            height: 42px;
+            background: var(--main-blue);
+            color: #fff;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.15rem;
+            font-weight: 800;
+        }
+
+        .drawer-menu-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            flex: 1;
+        }
+
+        .drawer-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 14px;
+            border-radius: 12px;
+            color: var(--text-dark);
+            font-weight: 700;
+            font-size: 0.9rem;
+            cursor: pointer;
+            border: none;
+            background: transparent;
+            width: 100%;
+            text-align: right;
+            text-decoration: none;
+            transition: background 0.15s ease;
+        }
+
+        .drawer-item:hover, .drawer-item:active {
+            background: rgba(255, 255, 255, 0.05);
+            color: #60a5fa;
+        }
+
+        .drawer-item i {
+            color: var(--text-gray);
+            font-size: 1.1rem;
+            width: 22px;
+        }
+
+        /* نافذة تأكيد تسجيل الخروج وتغيير كلمة السر */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(6px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1100;
+            padding: 20px;
+        }
+
+        .modal-card {
+            background: #121826;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 24px;
+            width: 100%;
+            max-width: 380px;
+            text-align: center;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.8);
+            animation: popIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .modal-card i.warn-icon {
+            font-size: 2.2rem;
+            color: #f87171;
+            margin-bottom: 12px;
+            background: rgba(239, 68, 68, 0.1);
+            width: 60px;
+            height: 60px;
+            line-height: 60px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .modal-card h3 {
+            font-size: 1.15rem;
+            font-weight: 800;
+            margin-bottom: 6px;
+        }
+
+        .modal-card p {
+            font-size: 0.86rem;
+            color: var(--text-gray);
+            margin-bottom: 20px;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-modal-confirm {
+            flex: 1;
+            padding: 12px;
+            background: var(--danger-color);
+            border: none;
+            color: #fff;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 0.88rem;
+            cursor: pointer;
+        }
+
+        .btn-modal-cancel {
+            flex: 1;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid var(--border-line);
+            color: var(--text-gray);
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 0.88rem;
+            cursor: pointer;
+        }
+
+        .alert-chip {
+            display: none;
+            margin-top: 14px;
+            padding: 12px;
+            border-radius: 12px;
+            font-size: 0.84rem;
+            text-align: center;
+            font-weight: 700;
+        }
+
+        .alert-error {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.25);
+            color: #fca5a5;
+        }
+
+        .alert-success {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.25);
+            color: #6ee7b7;
+        }
+
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        @keyframes popIn { from { opacity: 0; transform: scale(0.92); } to { opacity: 1; transform: scale(1); } }
+        @keyframes floatPulse {
+            0%, 100% { box-shadow: 0 8px 24px rgba(34, 158, 217, 0.45); }
+            50% { box-shadow: 0 10px 30px rgba(34, 158, 217, 0.7); }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 1. واجهة إنشاء حساب جديد -->
+    <div id="registerView" class="auth-screen">
+        <div class="clean-card" style="max-width: 440px;">
+            <div style="text-align: center; margin-bottom: 22px;">
+                <div style="width: 52px; height: 52px; background: rgba(37, 99, 235, 0.15); color: #60a5fa; border-radius: 16px; margin: 0 auto 12px; display: flex; align-items: center; justify-content: center; font-size: 1.4rem;">
+                    <i class="fa-solid fa-user-plus"></i>
+                </div>
+                <h1 style="font-size: 1.35rem; font-weight: 900;">استخراج رقم الهاتف</h1>
+                <p style="font-size: 0.84rem; color: var(--text-gray); margin-top: 4px;">إنشاء حساب جديد للمتابعة</p>
+            </div>
+
+            <form onsubmit="handleRegister(event)">
+                <div class="form-group">
+                    <label>اسم المستخدم (Username)</label>
+                    <div class="input-wrap">
+                        <input type="text" id="regUser" class="ltr-input font-mono" placeholder="username" required autocomplete="off">
+                        <i class="fa-regular fa-user left-icon"></i>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>كلمة المرور (Password)</label>
+                    <div class="input-wrap">
+                        <input type="password" id="regPass" class="ltr-input font-mono" placeholder="••••••••" required>
+                        <i class="fa-solid fa-lock left-icon"></i>
+                        <i class="fa-regular fa-eye toggle-eye" onclick="togglePassVisibility('regPass', this)"></i>
+                    </div>
+                </div>
+
+                <button type="submit" id="btnRegSubmit" class="btn-main" style="margin-top: 12px;">
+                    <span>إنشاء الحساب</span>
+                    <i class="fa-solid fa-arrow-left"></i>
+                </button>
+            </form>
+
+            <div class="auth-switch-link">
+                لديك حساب بالفعل؟ <a onclick="showLoginView()">تسجيل الدخول</a>
+            </div>
+            
+            <div id="regAlert" class="alert-chip alert-error"></div>
+        </div>
+    </div>
+
+    <!-- 2. واجهة تسجيل الدخول -->
+    <div id="loginView" class="auth-screen" style="display: none;">
+        <div class="clean-card" style="max-width: 440px;">
+            <div style="text-align: center; margin-bottom: 22px;">
+                <div style="width: 52px; height: 52px; background: rgba(37, 99, 235, 0.15); color: #60a5fa; border-radius: 16px; margin: 0 auto 12px; display: flex; align-items: center; justify-content: center; font-size: 1.4rem;">
+                    <i class="fa-solid fa-shield-halved"></i>
+                </div>
+                <h1 style="font-size: 1.35rem; font-weight: 900;">تسجيل الدخول</h1>
+                <p style="font-size: 0.84rem; color: var(--text-gray); margin-top: 4px;">أدخل بيانات حسابك المعتمد</p>
+            </div>
+
+            <div id="loginNotice" class="alert-chip alert-success" style="margin-bottom: 14px;"></div>
+
+            <form onsubmit="handleLogin(event)">
+                <div class="form-group">
+                    <label>اسم المستخدم (Username)</label>
+                    <div class="input-wrap">
+                        <input type="text" id="loginUser" class="ltr-input font-mono" placeholder="username" required autocomplete="off">
+                        <i class="fa-regular fa-user left-icon"></i>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>كلمة المرور (Password)</label>
+                    <div class="input-wrap">
+                        <input type="password" id="loginPass" class="ltr-input font-mono" placeholder="••••••••" required>
+                        <i class="fa-solid fa-lock left-icon"></i>
+                        <i class="fa-regular fa-eye toggle-eye" onclick="togglePassVisibility('loginPass', this)"></i>
+                    </div>
+                </div>
+
+                <button type="submit" id="btnLoginSubmit" class="btn-main" style="margin-top: 12px;">
+                    <span>دخول</span>
+                    <i class="fa-solid fa-arrow-left"></i>
+                </button>
+            </form>
+
+            <div class="auth-switch-link">
+                ليس لديك حساب؟ <a onclick="showRegisterView()">إنشاء حساب جديد</a>
+            </div>
+
+            <div id="loginAlert" class="alert-chip alert-error"></div>
+        </div>
+    </div>
+
+    <!-- 3. الواجهة الداخلية للنظام -->
+    <div id="appView" class="app-screen">
+        
+        <!-- الهيدر العلوي المنظم -->
+        <header class="top-bar">
+            <div class="header-right">
+                <button class="btn-drawer-open" onclick="toggleDrawer(true)">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
+                <div class="brand-name">
+                    <i class="fa-solid fa-phone-volume text-primary"></i>
+                    <span>استخراج رقم الهاتف</span>
+                </div>
+            </div>
+
+            <div class="header-center">
+                <div class="sub-chip" id="topCountdown">
+                    <i class="fa-regular fa-clock"></i>
+                    <span id="countdownText">جاري الفحص...</span>
+                </div>
+            </div>
+        </header>
+
+        <div class="content-box">
+            
+            <!-- قسم الاستخراج الرئيسي -->
+            <section id="viewInquiry">
+                <div class="clean-card">
+                    <h2 style="font-size: 1.15rem; font-weight: 800; text-align: center;">استخراج رقم الهاتف والبيانات</h2>
+                    
+                    <div class="form-group" style="margin: 18px 0;">
+                        <div class="input-wrap">
+                            <input type="tel" id="accNumber" class="font-mono text-center" 
+                                   placeholder="أدخل رقم الحساب هنا" 
+                                   autocomplete="off" maxlength="30">
+                            <i class="fa-regular fa-credit-card left-icon"></i>
+                        </div>
+                    </div>
+
+                    <button id="btnSearch" class="btn-main" onclick="fetchAccount()">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                        <span>استخراج البيانات</span>
+                    </button>
+
+                    <div id="loaderBox" class="loader-wrap">
+                        <div class="spinner-ring"></div>
+                        <div style="font-size: 0.86rem; font-weight: 700;">جاري استخراج السجل والبيانات...</div>
+                    </div>
+
+                    <!-- نتيجة الاستخراج -->
+                    <div id="resultBox" class="result-box">
+                        <div class="result-meta">
+                            <div class="meta-row">
+                                <span style="color: var(--text-gray);">اسم العميل:</span>
+                                <span id="nameVal" style="font-weight: 700;">--</span>
+                            </div>
+                            <div class="meta-row active">
+                                <span style="color: var(--text-gray);">رقم الهاتف:</span>
+                                <span id="phoneVal" class="font-mono text-success" style="font-weight: 800;" dir="ltr">--</span>
+                            </div>
+                            <div class="meta-row">
+                                <span style="color: var(--text-gray);">رقم الحساب:</span>
+                                <span id="accVal" class="font-mono" style="font-weight: 700;" dir="ltr">--</span>
+                            </div>
+                            <div class="meta-row">
+                                <span style="color: var(--text-gray);">رقم العميل (CIF):</span>
+                                <span id="cifVal" class="font-mono" style="font-weight: 700;" dir="ltr">--</span>
+                            </div>
+                            <div class="meta-row">
+                                <span style="color: var(--text-gray);">الفرع:</span>
+                                <span id="branchVal" style="font-weight: 700;">--</span>
+                            </div>
+                            <div class="meta-row">
+                                <span style="color: var(--text-gray);">حالة الحساب:</span>
+                                <span id="statusVal" class="text-success" style="font-weight: 700;">نشط</span>
+                            </div>
+                        </div>
+
+                        <button class="btn-copy-report" onclick="copyFullReport(currentData)">
+                            <i class="fa-regular fa-copy"></i>
+                            <span id="copyReportLabel">نسخ التقرير بالكامل للإرسال</span>
+                        </button>
+                    </div>
+
+                    <div id="errorBox" class="alert-chip alert-error"></div>
+                </div>
+            </section>
+
+            <!-- قسم الباقة -->
+            <section id="viewPlans" style="display: none;">
+                <div class="clean-card">
+                    <h2 style="font-size: 1.15rem; font-weight: 800; text-align: center; margin-bottom: 12px;">باقة الاستخراج</h2>
+
+                    <!-- 1. تظهر في حال لم يكن لدى المستخدم باقة مفعلة -->
+                    <div id="unsubscribedCard" class="package-card">
+                        <div class="package-title">الباقة الأسبوعية</div>
+                        <div class="package-price font-mono">500,000 <span style="font-size:0.85rem; font-family:'Tajawal';">SDG</span></div>
+                        <div class="package-detail">صلاحية لمدة 7 أيام كاملة، استخراج سريع وفوري بدون حدود للبيانات.</div>
+
+                        <div class="activation-box">
+                            <label>كود التفعيل:</label>
+                            <input type="text" id="activationCodeInput" class="font-mono" placeholder="أدخل الكود هنا" autocomplete="off">
+                            <button id="btnActivateSub" class="btn-activate" onclick="redeemActivationCode()">تفعيل الباقة بالكود</button>
+                            <p style="font-size: 0.78rem; color: var(--text-gray); text-align: center; margin-top: 10px;">
+                                <i class="fa-solid fa-shield-halved me-1"></i> يتم الحصول على كود التفعيل حصرياً من قبل الإدارة
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- 2. تظهر عند تفعيل الباقة بنجاح ويختفي كرت الشراء والكود -->
+                    <div id="subscribedCard" class="active-sub-card">
+                        <div class="active-sub-icon">
+                            <i class="fa-solid fa-circle-check"></i>
+                        </div>
+                        <h3 style="font-size: 1.25rem; font-weight: 800; color: #fff; margin-bottom: 6px;">لديك باقة نشطة</h3>
+                        <p style="font-size: 0.88rem; color: #34d399; font-weight: 700; margin-bottom: 18px;" id="activePlanDuration">
+                            متبقي على انتهاء باقتك: --
+                        </p>
+                        <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-line); border-radius: 12px; padding: 12px; font-size: 0.82rem; color: var(--text-gray); line-height: 1.6;">
+                            خدمة الاستخراج مفتوحة بالكامل بدون قيود. سيتاح التجديد وإدخال كود جديد تلقائياً عند انتهاء المدة الحالية.
+                        </div>
+                    </div>
+
+                    <div id="planNotice" class="alert-chip" style="margin-top: 14px;"></div>
+                </div>
+            </section>
+
+        </div>
+
+        <!-- زر التيليجرام العائم في الصفحة -->
+        <a id="floatingTelegramBtn" href="#" target="_blank" class="floating-telegram-btn">
+            <i class="fa-brands fa-telegram"></i>
+            <span>تواصل مع الدعم</span>
+        </a>
+
+        <!-- شريط التنقل السفلي -->
+        <nav class="bottom-nav">
+            <button class="nav-btn active" id="btnNavInquiry" onclick="switchView('viewInquiry')">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <span>الاستخراج</span>
+            </button>
+            <button class="nav-btn" id="btnNavPlans" onclick="switchView('viewPlans')">
+                <i class="fa-solid fa-bolt"></i>
+                <span>الباقة</span>
+            </button>
+        </nav>
+    </div>
+
+    <!-- 4. القائمة الجانبية (3 شخطات) -->
+    <div class="drawer-overlay" id="drawerOverlay" onclick="toggleDrawer(false)"></div>
+    <div class="drawer-panel" id="drawerPanel">
+        <div class="drawer-header">
+            <h3>الإعدادات</h3>
+            <button onclick="toggleDrawer(false)" style="background:none; border:none; color:var(--text-gray); font-size:1.2rem; cursor:pointer;">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <div class="drawer-user-info">
+            <div class="drawer-avatar" id="drawerAvatar">U</div>
+            <div>
+                <div style="font-weight: 800; font-size: 0.92rem; color: #fff;" id="drawerUsername">username</div>
+                <div style="font-size: 0.75rem; color: #34d399; font-weight: 700;">مستخدم معتمد</div>
+            </div>
+        </div>
+
+        <div class="drawer-menu-list">
+            <!-- خيار التواصل مع الدعم الفني عبر التيليجرام -->
+            <a id="drawerTelegramLink" href="#" target="_blank" class="drawer-item" style="color: #38bdf8;">
+                <i class="fa-brands fa-telegram" style="color: #38bdf8;"></i>
+                <span>التواصل مع الدعم</span>
+            </a>
+            <button class="drawer-item" onclick="openPasswordModal()">
+                <i class="fa-solid fa-key text-warning"></i>
+                <span>تغيير كلمة السر</span>
+            </button>
+            <button class="drawer-item" onclick="toggleDrawer(false); switchView('viewInquiry');">
+                <i class="fa-solid fa-magnifying-glass text-primary"></i>
+                <span>شاشة الاستخراج</span>
+            </button>
+            <button class="drawer-item" onclick="toggleDrawer(false); switchView('viewPlans');">
+                <i class="fa-solid fa-bolt text-warning"></i>
+                <span>باقة الاشتراك</span>
+            </button>
+            <div style="height: 1px; background: var(--border-line); margin: 8px 0;"></div>
+            <button class="drawer-item" style="color: #f87171;" onclick="toggleDrawer(false); openLogoutModal();">
+                <i class="fa-solid fa-arrow-right-from-bracket" style="color: #f87171;"></i>
+                <span>تسجيل الخروج</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- نافذة تغيير كلمة السر -->
+    <div class="modal-overlay" id="passwordModal">
+        <div class="modal-card" style="text-align: right;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+                <h3 style="margin:0; font-size:1.1rem; color:#fff;"><i class="fa-solid fa-key me-2 text-warning"></i>تغيير كلمة السر</h3>
+                <button onclick="closePasswordModal()" style="background:none; border:none; color:var(--text-gray); font-size:1.1rem; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            
+            <form onsubmit="handlePasswordChange(event)">
+                <div class="form-group">
+                    <label>كلمة المرور الجديدة</label>
+                    <div class="input-wrap">
+                        <input type="password" id="newPassInput" class="ltr-input font-mono" placeholder="••••••••" required>
+                        <i class="fa-solid fa-lock left-icon"></i>
+                        <i class="fa-regular fa-eye toggle-eye" onclick="togglePassVisibility('newPassInput', this)"></i>
+                    </div>
+                </div>
+
+                <div class="modal-actions" style="margin-top: 16px;">
+                    <button type="submit" class="btn-main" style="flex:1;">حفظ وتحديث</button>
+                    <button type="button" class="btn-modal-cancel" onclick="closePasswordModal()">إلغاء</button>
+                </div>
+            </form>
+            <div id="passChangeAlert" class="alert-chip"></div>
+        </div>
+    </div>
+
+    <!-- نافذة تأكيد الخروج -->
+    <div class="modal-overlay" id="logoutModal">
+        <div class="modal-card">
+            <i class="fa-solid fa-arrow-right-from-bracket warn-icon"></i>
+            <h3>تسجيل الخروج</h3>
+            <p>هل أنت متأكد من رغبتك في تسجيل الخروج من حسابك؟</p>
+            <div class="modal-actions">
+                <button class="btn-modal-confirm" onclick="confirmLogout()">نعم، تسجيل الخروج</button>
+                <button class="btn-modal-cancel" onclick="closeLogoutModal()">إلغاء</button>
+            </div>
+        </div>
+    </div>
+
+<script>
+    // ==========================================
+    // ضع يوزر التيليجرام الخاص بالدعم هنا (بدون @)
+    // ==========================================
+    const TELEGRAM_SUPPORT_USERNAME = "@VGOJJ"; 
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyBEF4_R1dnOwpZefYNOMazBhnsmB_SjIHQ",
+        authDomain: "apryy-ac426.firebaseapp.com",
+        databaseURL: "https://apryy-ac426-default-rtdb.firebaseio.com",
+        projectId: "apryy-ac426",
+        storageBucket: "apryy-ac426.firebasestorage.app",
+        messagingSenderId: "1072046119868",
+        appId: "1:1072046119868:web:bef2ff97487dab5a5a69b9",
+        measurementId: "G-EMEZ596F5L"
+    };
+
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // إعداد كود تجريبي
+    const sampleCode = "PRO-WEEK-2026";
+    db.ref("activation_codes/" + sampleCode).once("value").then(snap => {
+        if (!snap.exists()) {
+            db.ref("activation_codes/" + sampleCode).set({
+                days: 7,
+                used: false,
+                type: "weekly",
+                createdAt: Date.now()
+            });
+        }
+    });
+
+    let currentUsername = null;
+    let userSubscription = null;
+    let currentData = null;
+    let currentRef = null;
+    let timeoutTimer = null;
+
+    // إظهار/إخفاء كلمة المرور
+    function togglePassVisibility(inputId, iconEl) {
+        const input = document.getElementById(inputId);
+        if (input.type === "password") {
+            input.type = "text";
+            iconEl.classList.replace("fa-eye", "fa-eye-slash");
+        } else {
+            input.type = "password";
+            iconEl.classList.replace("fa-eye-slash", "fa-eye");
+        }
+    }
+
+    window.addEventListener("DOMContentLoaded", () => {
+        // ضبط روابط الدعم الفني للتيليجرام
+        setupTelegramLinks();
+
+        const storedUser = localStorage.getItem("active_session_user");
+        if (storedUser) {
+            currentUsername = storedUser;
+            showApp();
+        } else {
+            showLoginView();
+        }
+    });
+
+    function setupTelegramLinks() {
+        const tgUrl = `https://t.me/${TELEGRAM_SUPPORT_USERNAME}`;
+        const floatingBtn = document.getElementById("floatingTelegramBtn");
+        const drawerLink = document.getElementById("drawerTelegramLink");
+        if (floatingBtn) floatingBtn.href = tgUrl;
+        if (drawerLink) drawerLink.href = tgUrl;
+    }
+
+    function showRegisterView() {
+        document.getElementById("registerView").style.display = "flex";
+        document.getElementById("loginView").style.display = "none";
+        document.getElementById("appView").style.display = "none";
+        document.getElementById("regAlert").style.display = "none";
+    }
+
+    function showLoginView(noticeMsg = "") {
+        document.getElementById("registerView").style.display = "none";
+        document.getElementById("loginView").style.display = "flex";
+        document.getElementById("appView").style.display = "none";
+        document.getElementById("loginAlert").style.display = "none";
+        
+        const notice = document.getElementById("loginNotice");
+        if (noticeMsg) {
+            notice.innerText = noticeMsg;
+            notice.style.display = "block";
+        } else {
+            notice.style.display = "none";
+        }
+    }
+
+    function showApp() {
+        document.getElementById("registerView").style.display = "none";
+        document.getElementById("loginView").style.display = "none";
+        document.getElementById("appView").style.display = "block";
+        
+        document.getElementById("drawerUsername").innerText = currentUsername;
+        document.getElementById("drawerAvatar").innerText = currentUsername.charAt(0).toUpperCase();
+
+        syncUserSubscription();
+    }
+
+    // 1. إنشاء الحساب
+    function handleRegister(e) {
+        e.preventDefault();
+        const user = document.getElementById("regUser").value.trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
+        const pass = document.getElementById("regPass").value.trim();
+        const alertBox = document.getElementById("regAlert");
+        const btn = document.getElementById("btnRegSubmit");
+
+        if (!user || !pass) {
+            alertBox.innerText = "يرجى كتابة اسم مستخدم باللغة الإنجليزية وكلمة مرور";
+            alertBox.style.display = "block";
+            return;
+        }
+
+        btn.disabled = true;
+        const userRef = db.ref("users/" + user);
+
+        userRef.once("value").then((snap) => {
+            if (snap.exists()) {
+                btn.disabled = false;
+                alertBox.innerText = "اسم المستخدم مسجل مسبقاً، اختر اسماً آخر";
+                alertBox.style.display = "block";
+            } else {
+                userRef.set({
+                    username: user,
+                    password: pass,
+                    createdAt: Date.now(),
+                    subscription: {
+                        isActive: false,
+                        expiresAt: 0
+                    }
+                }).then(() => {
+                    btn.disabled = false;
+                    document.getElementById("regUser").value = "";
+                    document.getElementById("regPass").value = "";
+                    showLoginView("تم إنشاء الحساب بنجاح! قم بتسجيل الدخول.");
+                }).catch((err) => {
+                    btn.disabled = false;
+                    alertBox.innerText = "خطأ في الاتصال: " + err.message;
+                    alertBox.style.display = "block";
+                });
+            }
+        });
+    }
+
+    // 2. تسجيل الدخول
+    function handleLogin(e) {
+        e.preventDefault();
+        const user = document.getElementById("loginUser").value.trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
+        const pass = document.getElementById("loginPass").value.trim();
+        const alertBox = document.getElementById("loginAlert");
+        const btn = document.getElementById("btnLoginSubmit");
+
+        btn.disabled = true;
+        const userRef = db.ref("users/" + user);
+
+        userRef.once("value").then((snap) => {
+            btn.disabled = false;
+            const data = snap.val();
+            if (data && data.password === pass) {
+                currentUsername = user;
+                localStorage.setItem("active_session_user", user);
+                showApp();
+            } else {
+                alertBox.innerText = "اسم المستخدم أو كلمة المرور غير صحيحة";
+                alertBox.style.display = "block";
+            }
+        }).catch((err) => {
+            btn.disabled = false;
+            alertBox.innerText = "تعذر الاتصال بقاعدة البيانات: " + err.message;
+            alertBox.style.display = "block";
+        });
+    }
+
+    // القائمة الجانبية (3 شخطات)
+    function toggleDrawer(open) {
+        const overlay = document.getElementById("drawerOverlay");
+        const panel = document.getElementById("drawerPanel");
+        if (open) {
+            overlay.classList.add("open");
+            panel.classList.add("open");
+        } else {
+            overlay.classList.remove("open");
+            panel.classList.remove("open");
+        }
+    }
+
+    // نافذة تغيير كلمة السر
+    function openPasswordModal() {
+        toggleDrawer(false);
+        document.getElementById("newPassInput").value = "";
+        document.getElementById("passChangeAlert").style.display = "none";
+        document.getElementById("passwordModal").style.display = "flex";
+    }
+
+    function closePasswordModal() {
+        document.getElementById("passwordModal").style.display = "none";
+    }
+
+    function handlePasswordChange(e) {
+        e.preventDefault();
+        const newPass = document.getElementById("newPassInput").value.trim();
+        const alertBox = document.getElementById("passChangeAlert");
+
+        if (!newPass || newPass.length < 4) {
+            alertBox.className = "alert-chip alert-error";
+            alertBox.innerText = "كلمة المرور يجب أن تكون 4 أحرف/أرقام على الأقل";
+            alertBox.style.display = "block";
+            return;
+        }
+
+        db.ref("users/" + currentUsername).update({
+            password: newPass
+        }).then(() => {
+            alertBox.className = "alert-chip alert-success";
+            alertBox.innerText = "تم تحديث كلمة المرور بنجاح ✓";
+            alertBox.style.display = "block";
+            setTimeout(() => { closePasswordModal(); }, 1500);
+        }).catch(err => {
+            alertBox.className = "alert-chip alert-error";
+            alertBox.innerText = "فشل التحديث: " + err.message;
+            alertBox.style.display = "block";
+        });
+    }
+
+    // إدارة تسجيل الخروج
+    function openLogoutModal() {
+        document.getElementById("logoutModal").style.display = "flex";
+    }
+
+    function closeLogoutModal() {
+        document.getElementById("logoutModal").style.display = "none";
+    }
+
+    function confirmLogout() {
+        closeLogoutModal();
+        localStorage.removeItem("active_session_user");
+        currentUsername = null;
+        userSubscription = null;
+        if (currentRef) currentRef.off();
+        showLoginView();
+    }
+
+    // مزامنة حالة الاشتراك
+    function syncUserSubscription() {
+        if (!currentUsername) return;
+        const subRef = db.ref("users/" + currentUsername + "/subscription");
+
+        subRef.on("value", (snap) => {
+            userSubscription = snap.val() || { isActive: false, expiresAt: 0 };
+            updateSubUI();
+        });
+    }
+
+    function updateSubUI() {
+        const topChip = document.getElementById("topCountdown");
+        const countdownText = document.getElementById("countdownText");
+        const unsubscribedCard = document.getElementById("unsubscribedCard");
+        const subscribedCard = document.getElementById("subscribedCard");
+        const activePlanDuration = document.getElementById("activePlanDuration");
+
+        const now = Date.now();
+        const isActive = userSubscription && userSubscription.isActive && userSubscription.expiresAt > now;
+
+        if (isActive) {
+            const diff = userSubscription.expiresAt - now;
+            const d = Math.floor(diff / (1000 * 60 * 60 * 24));
+            const h = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            
+            countdownText.innerText = `${d} يوم و ${h} س متبقية`;
+            topChip.classList.remove("expired");
+
+            unsubscribedCard.style.display = "none";
+            subscribedCard.style.display = "block";
+            activePlanDuration.innerText = `متبقي على انتهاء باقتك: ${d} أيام و ${h} ساعات`;
+        } else {
+            countdownText.innerText = "غير مفعل ⚠️";
+            topChip.classList.add("expired");
+
+            unsubscribedCard.style.display = "block";
+            subscribedCard.style.display = "none";
+        }
+    }
+
+    // تفعيل الكود
+    function redeemActivationCode() {
+        if (!currentUsername) return;
+        const code = document.getElementById("activationCodeInput").value.trim().toUpperCase();
+        const notice = document.getElementById("planNotice");
+        const btnAct = document.getElementById("btnActivateSub");
+
+        if (!code) {
+            alert("يرجى إدخال كود التفعيل أولاً");
+            return;
+        }
+
+        const now = Date.now();
+        if (userSubscription && userSubscription.isActive && userSubscription.expiresAt > now) {
+            alert("لديك باقة سارية بالفعل، لا يمكن تفعيل كود جديد حتى تنتهي الحالية.");
+            return;
+        }
+
+        btnAct.disabled = true;
+
+        const codeRef = db.ref("activation_codes/" + code);
+        codeRef.once("value").then(snap => {
+            const codeData = snap.val();
+
+            if (!codeData) {
+                btnAct.disabled = false;
+                notice.className = "alert-chip alert-error";
+                notice.innerText = "كود التفعيل المدخل غير صحيح، تأكد من نسخه بدقة.";
+                notice.style.display = "block";
+                return;
+            }
+
+            if (codeData.used) {
+                btnAct.disabled = false;
+                notice.className = "alert-chip alert-error";
+                notice.innerText = "هذا الكود تم استخدامه مسبقاً وغير صالح!";
+                notice.style.display = "block";
+                return;
+            }
+
+            const days = codeData.days || 7;
+            const expiry = now + (days * 24 * 60 * 60 * 1000);
+
+            codeRef.update({
+                used: true,
+                usedBy: currentUsername,
+                usedAt: now
+            });
+
+            db.ref("users/" + currentUsername + "/subscription").set({
+                isActive: true,
+                plan: "weekly",
+                codeUsed: code,
+                activatedAt: now,
+                expiresAt: expiry
+            }).then(() => {
+                alert(`تم تفعيل الباقة بنجاح لمدة ${days} أيام! ✓`);
+                document.getElementById("activationCodeInput").value = "";
+                notice.style.display = "none";
+                switchView('viewInquiry');
+            });
+        }).catch(err => {
+            btnAct.disabled = false;
+            alert("خطأ في التحقق من الكود: " + err.message);
+        });
+    }
+
+    // التبديل بين الشاشات
+    function switchView(viewId) {
+        document.getElementById("viewInquiry").style.display = (viewId === 'viewInquiry') ? 'block' : 'none';
+        document.getElementById("viewPlans").style.display = (viewId === 'viewPlans') ? 'block' : 'none';
+
+        document.getElementById("btnNavInquiry").classList.toggle('active', viewId === 'viewInquiry');
+        document.getElementById("btnNavPlans").classList.toggle('active', viewId === 'viewPlans');
+    }
+
+    // استخراج الحساب
+    function fetchAccount() {
+        const errBox = document.getElementById("errorBox");
+
+        const now = Date.now();
+        const hasValidSub = userSubscription && userSubscription.isActive && userSubscription.expiresAt > now;
+
+        if (!hasValidSub) {
+            errBox.innerText = "عذراً! حسابك غير مفعل. يرجى التوجه لخانة الباقة وإدخال كود التفعيل أولاً.";
+            errBox.style.display = "block";
+            return;
+        }
+
+        const input = document.getElementById("accNumber");
+        const btn = document.getElementById("btnSearch");
+        const loader = document.getElementById("loaderBox");
+        const result = document.getElementById("resultBox");
+
+        const acc = input.value.trim().replace(/\D/g, '');
+
+        if (!acc || acc.length < 4) {
+            errBox.innerText = "يرجى كتابة رقم حساب صحيح";
+            errBox.style.display = "block";
+            return;
+        }
+
+        errBox.style.display = "none";
+        result.style.display = "none";
+        btn.disabled = true;
+        btn.style.display = "none";
+        loader.style.display = "block";
+
+        timeoutTimer = setTimeout(() => {
+            resetControls();
+            errBox.innerText = "تعذر الاتصال، انتهت مهلة الانتظار.";
+            errBox.style.display = "block";
+        }, 22000);
+
+        currentRef = db.ref("inquiries").push();
+        currentRef.set({
+            query_value: acc,
+            requested_by: currentUsername,
+            status: "pending",
+            result: "",
+            timestamp: Date.now()
+        }).then(() => {
+            currentRef.on("value", (snap) => {
+                const data = snap.val();
+                if (!data) return;
+
+                if (data.status === "completed") {
+                    resetControls();
+                    parseResult(data.result, acc);
+                } else if (data.status === "failed") {
+                    resetControls();
+                    errBox.innerText = data.result || "الحساب غير مسجل أو غير متاح";
+                    errBox.style.display = "block";
+                }
+            });
+        }).catch((err) => {
+            resetControls();
+            errBox.innerText = "خطأ في الشبكة: " + err.message;
+            errBox.style.display = "block";
+        });
+    }
+
+    function parseResult(raw, searchedAcc) {
+        let parsed = {};
+        if (typeof raw === "object" && raw !== null) {
+            parsed = raw;
+        } else {
+            const phoneExp = raw.match(/رقم الهاتف[:\s]+([^\n\r]+)/) || raw.match(/الهاتف[:\s]+([^\n\r]+)/);
+            const nameExp = raw.match(/اسم صاحب الحساب[:\s]+([^\n\r]+)/) || raw.match(/الاسم[:\s]+([^\n\r]+)/);
+            const cifExp = raw.match(/رقم العميل\s*\(CIF\)[:\s]+([^\n\r]+)/) || raw.match(/CIF[:\s]+([^\n\r]+)/);
+            const branchExp = raw.match(/الفرع[:\s]+([^\n\r]+)/);
+            const statusExp = raw.match(/الحالة[:\s]+([^\n\r]+)/);
+
+            parsed = {
+                name: nameExp ? nameExp[1].trim() : "--",
+                phone: phoneExp ? phoneExp[1].trim() : "غير متوفر",
+                account: searchedAcc,
+                cif: cifExp ? cifExp[1].trim() : "--",
+                branch: branchExp ? branchExp[1].trim() : "المركز الرئيسي",
+                status: statusExp ? statusExp[1].trim() : "نشط"
+            };
+        }
+
+        currentData = parsed;
+        document.getElementById("nameVal").innerText = parsed.name || "--";
+        document.getElementById("phoneVal").innerText = parsed.phone || "غير متوفر";
+        document.getElementById("accVal").innerText = parsed.account || "--";
+        document.getElementById("cifVal").innerText = parsed.cif || "--";
+        document.getElementById("branchVal").innerText = parsed.branch || "--";
+        document.getElementById("statusVal").innerText = parsed.status || "نشط";
+
+        document.getElementById("resultBox").style.display = "block";
+    }
+
+    // نسخ التقرير المباشر
+    function copyFullReport(data) {
+        if (!data) return;
+        const msg = `📋 *استخراج رقم الهاتف*\n` +
+                    `━━━━━━━━━━━━━━━\n` +
+                    `👤 *اسم العميل:* ${data.name || '--'}\n` +
+                    `📱 *رقم الهاتف:* ${data.phone || '--'}\n` +
+                    `💳 *رقم الحساب:* ${data.account || '--'}\n` +
+                    `🔢 *رقم CIF:* ${data.cif || '--'}\n` +
+                    `🏦 *الفرع:* ${data.branch || '--'}\n` +
+                    `✅ *الحالة:* ${data.status || 'نشط'}`;
+
+        navigator.clipboard.writeText(msg).then(() => {
+            const btn = document.getElementById("copyReportLabel");
+            const old = btn.innerText;
+            btn.innerText = "تم النسخ بنجاح ✓";
+            setTimeout(() => { btn.innerText = old; }, 1800);
+        });
+    }
+
+    function resetControls() {
+        clearTimeout(timeoutTimer);
+        if (currentRef) {
+            currentRef.off();
+            currentRef = null;
+        }
+        document.getElementById("loaderBox").style.display = "none";
+        const btn = document.getElementById("btnSearch");
+        btn.style.display = "flex";
+        btn.disabled = false;
+    }
+</script>
+
+</body>
+</html>
